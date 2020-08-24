@@ -24,7 +24,7 @@ type Counter interface {
 }
 
 // Blocks returns the blockwise hash of the reader.
-func Blocks(ctx context.Context, r io.Reader, blocksize int, sizehint int64, counter Counter, useWeakHashes bool) ([]protocol.BlockInfo, error) {
+func Blocks(ctx context.Context, chunker Chunker, counter Counter, useWeakHashes bool) ([]protocol.BlockInfo, error) {
 	if counter == nil {
 		counter = &noopCounter{}
 	}
@@ -44,11 +44,9 @@ func Blocks(ctx context.Context, r io.Reader, blocksize int, sizehint int64, cou
 	var blocks []protocol.BlockInfo
 	var hashes, thisHash []byte
 
-	if sizehint >= 0 {
+	if numBlocks := chunker.Chunks(); numBlocks > 0 {
 		// Allocate contiguous blocks for the BlockInfo structures and their
 		// hashes once and for all, and stick to the specified size.
-		r = io.LimitReader(r, sizehint)
-		numBlocks := int(sizehint / int64(blocksize))
 		blocks = make([]protocol.BlockInfo, 0, numBlocks)
 		hashes = make([]byte, 0, hashLength*numBlocks)
 	}
@@ -57,7 +55,6 @@ func Blocks(ctx context.Context, r io.Reader, blocksize int, sizehint int64, cou
 	buf := make([]byte, 32<<10)
 
 	var offset int64
-	lr := io.LimitReader(r, int64(blocksize)).(*io.LimitedReader)
 	for {
 		select {
 		case <-ctx.Done():
@@ -65,7 +62,16 @@ func Blocks(ctx context.Context, r io.Reader, blocksize int, sizehint int64, cou
 		default:
 		}
 
-		lr.N = int64(blocksize)
+		lr, err := chunker.Chunk()
+		if err == io.EOF {
+			// There are no more chunks, we're done.
+			break
+		}
+		if err != nil {
+			// There was an error getting a chunk.
+			return nil, err
+		}
+
 		n, err := io.CopyBuffer(multiHf, lr, buf)
 		if err != nil {
 			return nil, err

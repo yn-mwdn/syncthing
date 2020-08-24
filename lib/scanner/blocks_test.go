@@ -71,7 +71,12 @@ var blocksTestData = []struct {
 func TestBlocks(t *testing.T) {
 	for testNo, test := range blocksTestData {
 		buf := bytes.NewBuffer(test.data)
-		blocks, err := Blocks(context.TODO(), buf, test.blocksize, -1, nil, true)
+		chn := &standardChunker{
+			r:         buf,
+			size:      int64(len(test.data)),
+			chunkSize: int64(test.blocksize),
+		}
+		blocks, err := Blocks(context.TODO(), chn, nil, true)
 
 		if err != nil {
 			t.Fatal(err)

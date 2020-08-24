@@ -130,7 +130,12 @@ func TestVerify(t *testing.T) {
 	progress := newByteCounter()
 	defer progress.Close()
 
-	blocks, err := Blocks(context.TODO(), buf, blocksize, -1, progress, false)
+	chn := &standardChunker{
+		r:         buf,
+		size:      int64(buf.Len()),
+		chunkSize: int64(blocksize),
+	}
+	blocks, err := Blocks(context.TODO(), chn, progress, false)
 	if err != nil {
 		t.Fatal(err)
 	}

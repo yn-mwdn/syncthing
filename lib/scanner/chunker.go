@@ -7,7 +7,8 @@ import (
 )
 
 type Chunker interface {
-	Chunk() (io.Reader, int, error)
+	Chunks() int
+	Chunk() (io.Reader, error)
 }
 
 type standardChunker struct {
@@ -41,12 +42,16 @@ func newStandardChunker(r io.Reader, size int64, curBlockSize int) *standardChun
 	}
 }
 
-func (c *standardChunker) Chunk() (io.Reader, int, error) {
+func (c *standardChunker) Chunks() int {
+	return int((c.size + 1) / c.chunkSize)
+}
+
+func (c *standardChunker) Chunk() (io.Reader, error) {
 	if c.pos >= c.size {
-		return nil, 0, io.EOF
+		return nil, io.EOF
 	}
 
 	lr := io.LimitReader(c.r, c.chunkSize)
 	c.pos += c.chunkSize
-	return lr, int(c.chunkSize), nil
+	return lr, nil
 }
