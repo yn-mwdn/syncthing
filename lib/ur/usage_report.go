@@ -431,7 +431,8 @@ func cpuBenchOnce(ctx context.Context, duration time.Duration, useWeakHash bool,
 	var err error
 	for time.Since(t0) < duration {
 		r := bytes.NewReader(bs)
-		blocksResult, err = scanner.Blocks(ctx, r, protocol.MinBlockSize, int64(len(bs)), nil, useWeakHash)
+		chn := scanner.NewStandardChunker(r, int64(len(bs)), protocol.MinBlockSize)
+		blocksResult, err = scanner.Blocks(ctx, chn, nil, useWeakHash)
 		if err != nil {
 			return 0 // Context done
 		}

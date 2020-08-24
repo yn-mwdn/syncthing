@@ -36,7 +36,8 @@ func HashFile(ctx context.Context, fs fs.Filesystem, path string, blockSize int,
 
 	// Hash the file. This may take a while for large files.
 
-	chunker := newStandardChunker(fd, size, blockSize)
+	//chunker := newStandardChunker(fd, size, blockSize)
+	chunker := newPatternBreaker(fd, 512, 256<<10, []byte("ustar\000"))
 
 	blocks, err := Blocks(ctx, chunker, counter, useWeakHashes)
 	if err != nil {

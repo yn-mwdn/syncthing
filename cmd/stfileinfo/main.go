@@ -71,7 +71,9 @@ func main() {
 		if *standardBlocks || blockSize < protocol.MinBlockSize {
 			blockSize = protocol.BlockSize(fi.Size())
 		}
-		bs, err := scanner.Blocks(context.TODO(), fd, blockSize, fi.Size(), nil, true)
+
+		chn := scanner.NewStandardChunker(fd, fi.Size(), blockSize)
+		bs, err := scanner.Blocks(context.TODO(), chn, nil, true)
 		if err != nil {
 			log.Fatal(err)
 		}

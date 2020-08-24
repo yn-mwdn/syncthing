@@ -26,7 +26,7 @@ type standardChunker struct {
 	chunkSize int64
 }
 
-func newStandardChunker(r io.Reader, size int64, curBlockSize int) *standardChunker {
+func NewStandardChunker(r io.Reader, size int64, curBlockSize int) Chunker {
 	blockSize := protocol.BlockSize(size)
 
 	if curBlockSize > 0 {
@@ -80,6 +80,7 @@ func newPatternBreaker(r io.Reader, min, max int, pattern []byte) *patternBreake
 		pattern:      pattern,
 	}
 	b.s.Split(b.splitFunc)
+	b.s.Buffer(make([]byte, min), max)
 	return b
 }
 
@@ -122,7 +123,7 @@ func (b *patternBreaker) splitFunc(data []byte, atEOF bool) (advance int, token 
 		offset += idx + len(b.pattern)
 	}
 
-	if len(data) > b.maxChunkSize {
+	if len(data) >= b.maxChunkSize {
 		return b.maxChunkSize, data[:b.maxChunkSize], nil
 	}
 	return 0, nil, nil
