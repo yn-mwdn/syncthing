@@ -117,20 +117,19 @@ func (f *fakeConnection) DownloadProgress(_ context.Context, folder string, upda
 }
 
 func (f *fakeConnection) addFileLocked(name string, flags uint32, ftype protocol.FileInfoType, data []byte, version protocol.Vector) {
-	blockSize := protocol.BlockSize(int64(len(data)))
-	blocks, _ := scanner.Blocks(context.TODO(), bytes.NewReader(data), blockSize, int64(len(data)), nil, true)
+	chn := scanner.NewStandardChunker(bytes.NewReader(data), int64(len(data)), 0)
+	blocks, _ := scanner.Blocks(context.TODO(), chn, nil, true)
 
 	if ftype == protocol.FileInfoTypeFile || ftype == protocol.FileInfoTypeDirectory {
 		f.files = append(f.files, protocol.FileInfo{
-			Name:         name,
-			Type:         ftype,
-			Size:         int64(len(data)),
-			ModifiedS:    time.Now().Unix(),
-			Permissions:  flags,
-			Version:      version,
-			Sequence:     time.Now().UnixNano(),
-			RawBlockSize: int32(blockSize),
-			Blocks:       blocks,
+			Name:        name,
+			Type:        ftype,
+			Size:        int64(len(data)),
+			ModifiedS:   time.Now().Unix(),
+			Permissions: flags,
+			Version:     version,
+			Sequence:    time.Now().UnixNano(),
+			Blocks:      blocks,
 		})
 	} else {
 		// Symlink

@@ -338,7 +338,7 @@ func TestWeakHash(t *testing.T) {
 	// File 1: abcdefgh
 	// File 2: xyabcdef
 	f.Seek(0, os.SEEK_SET)
-	existing, err := scanner.Blocks(context.TODO(), f, protocol.MinBlockSize, size, nil, true)
+	existing, err := scanner.Blocks(context.TODO(), scanner.NewStandardChunker(f, size, 0), nil, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -347,7 +347,7 @@ func TestWeakHash(t *testing.T) {
 	remainder := io.LimitReader(f, size-shift)
 	prefix := io.LimitReader(rand.Reader, shift)
 	nf := io.MultiReader(prefix, remainder)
-	desired, err := scanner.Blocks(context.TODO(), nf, protocol.MinBlockSize, size, nil, true)
+	desired, err := scanner.Blocks(context.TODO(), scanner.NewStandardChunker(nf, size, 0), nil, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -704,8 +704,8 @@ func TestIssue3164(t *testing.T) {
 
 func TestDiff(t *testing.T) {
 	for i, test := range diffTestData {
-		a, _ := scanner.Blocks(context.TODO(), bytes.NewBufferString(test.a), test.s, -1, nil, false)
-		b, _ := scanner.Blocks(context.TODO(), bytes.NewBufferString(test.b), test.s, -1, nil, false)
+		a, _ := scanner.Blocks(context.TODO(), scanner.NewFixedChunker(bytes.NewBufferString(test.a), int64(len(test.a)), test.s), nil, false)
+		b, _ := scanner.Blocks(context.TODO(), scanner.NewFixedChunker(bytes.NewBufferString(test.b), int64(len(test.b)), test.s), nil, false)
 		_, d := blockDiff(a, b)
 		if len(d) != len(test.d) {
 			t.Fatalf("Incorrect length for diff %d; %d != %d", i, len(d), len(test.d))
@@ -725,8 +725,8 @@ func TestDiff(t *testing.T) {
 func BenchmarkDiff(b *testing.B) {
 	testCases := make([]struct{ a, b []protocol.BlockInfo }, 0, len(diffTestData))
 	for _, test := range diffTestData {
-		a, _ := scanner.Blocks(context.TODO(), bytes.NewBufferString(test.a), test.s, -1, nil, false)
-		b, _ := scanner.Blocks(context.TODO(), bytes.NewBufferString(test.b), test.s, -1, nil, false)
+		a, _ := scanner.Blocks(context.TODO(), scanner.NewFixedChunker(bytes.NewBufferString(test.a), int64(len(test.a)), test.s), nil, false)
+		b, _ := scanner.Blocks(context.TODO(), scanner.NewFixedChunker(bytes.NewBufferString(test.b), int64(len(test.b)), test.s), nil, false)
 		testCases = append(testCases, struct{ a, b []protocol.BlockInfo }{a, b})
 	}
 	b.ReportAllocs()

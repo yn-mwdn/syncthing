@@ -15,17 +15,13 @@ import (
 )
 
 type Chunker interface {
-	Chunks() int
+	Chunks() int // Estimated number of chunks, optional
 	Chunk() (io.Reader, error)
 }
 
-type standardChunker struct {
-	r         io.Reader
-	size      int64
-	pos       int64
-	chunkSize int64
-}
-
+// NewStandardChunker creates a new fixed-size chunker based on our block
+// size calculation, taking into account a slight preference towards
+// curBlockSize if it's within reason.
 func NewStandardChunker(r io.Reader, size int64, curBlockSize int) Chunker {
 	blockSize := protocol.BlockSize(size)
 
@@ -42,12 +38,37 @@ func NewStandardChunker(r io.Reader, size int64, curBlockSize int) Chunker {
 		}
 	}
 
+	// Clamping
+	if blockSize < protocol.MinBlockSize {
+		blockSize = protocol.MinBlockSize
+	} else if blockSize > protocol.MaxBlockSize {
+		blockSize = protocol.MaxBlockSize
+	}
+
 	return &standardChunker{
 		r:         r,
 		size:      size,
 		pos:       0,
 		chunkSize: int64(blockSize),
 	}
+}
+
+// NewFixedChunker creates a new fixed-sized chunker using exactly the
+// specified block size, always.
+func NewFixedChunker(r io.Reader, size int64, blockSize int) Chunker {
+	return &standardChunker{
+		r:         r,
+		size:      size,
+		pos:       0,
+		chunkSize: int64(blockSize),
+	}
+}
+
+type standardChunker struct {
+	r         io.Reader
+	size      int64
+	pos       int64
+	chunkSize int64
 }
 
 func (c *standardChunker) Chunks() int {

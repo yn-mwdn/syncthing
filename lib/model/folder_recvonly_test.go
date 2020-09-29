@@ -416,7 +416,8 @@ func setupKnownFiles(t *testing.T, ffs fs.Filesystem, data []byte) []protocol.Fi
 	if err != nil {
 		t.Fatal(err)
 	}
-	blocks, _ := scanner.Blocks(context.TODO(), bytes.NewReader(data), protocol.BlockSize(int64(len(data))), int64(len(data)), nil, true)
+	chn := scanner.NewStandardChunker(bytes.NewReader(data), int64(len(data)), 0)
+	blocks, _ := scanner.Blocks(context.TODO(), chn, nil, true)
 	knownFiles := []protocol.FileInfo{
 		{
 			Name:        "knownDir",
