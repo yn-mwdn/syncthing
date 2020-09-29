@@ -9,7 +9,7 @@ import (
 )
 
 func TestPatternBreaker(t *testing.T) {
-	data := []byte("this is some-*- data with a-*- few-*- break-*- words in-*- between")
+	data := []byte("this is some-*- data with a-*- few-*- break-*- patterns in-*- between")
 	b := newPatternBreaker(bytes.NewReader(data), 10, 20, []byte("-*-"))
 	for {
 		chunk, err := b.Chunk()

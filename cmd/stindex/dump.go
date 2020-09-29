@@ -113,7 +113,9 @@ func dump(ldb backend.Backend) {
 			fmt.Printf("[need] F:%d V:%q\n", folder, file)
 
 		case db.KeyTypeBlockList:
-			fmt.Printf("[blocklist] H:%x\n", key[1:])
+			var bs db.BlockList
+			bs.Unmarshal(it.Value())
+			fmt.Printf("[blocklist] H:%x %v\n", key[1:], bs)
 
 		case db.KeyTypeBlockListMap:
 			folder := binary.BigEndian.Uint32(key[1:])
