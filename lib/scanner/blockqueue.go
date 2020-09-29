@@ -16,7 +16,7 @@ import (
 )
 
 // HashFile hashes the files and returns a list of blocks representing the file.
-func HashFile(ctx context.Context, fs fs.Filesystem, path string, blockSize int, counter Counter, useWeakHashes bool) ([]protocol.BlockInfo, error) {
+func HashFile(ctx context.Context, fs fs.Filesystem, path string, curBlocks []protocol.BlockInfo, cf ChunkerFactory, counter Counter, useWeakHashes bool) ([]protocol.BlockInfo, error) {
 	fd, err := fs.Open(path)
 	if err != nil {
 		l.Debugln("open:", err)
@@ -36,8 +36,7 @@ func HashFile(ctx context.Context, fs fs.Filesystem, path string, blockSize int,
 
 	// Hash the file. This may take a while for large files.
 
-	chunker := newPatternBreaker(fd, protocol.MinBlockSize, protocol.MaxBlockSize, []byte{0, 0, 0, 0, 0, 0, 0, 0})
-	//chunker := NewStandardChunker(fd, size, blockSize)
+	chunker := cf.NewChunker(fd, size, curBlocks)
 	blocks, err := Blocks(ctx, chunker, counter, useWeakHashes)
 	if err != nil {
 		l.Debugln("blocks:", err)
@@ -73,7 +72,7 @@ type parallelHasher struct {
 	wg      sync.WaitGroup
 }
 
-func newParallelHasher(ctx context.Context, fs fs.Filesystem, workers int, outbox chan<- ScanResult, inbox <-chan protocol.FileInfo, counter Counter, done chan<- struct{}) {
+func newParallelHasher(ctx context.Context, fs fs.Filesystem, workers int, outbox chan<- ScanResult, inbox <-chan protocol.FileInfo, counter Counter, done chan<- struct{}, cf ChunkerFactory) {
 	ph := &parallelHasher{
 		fs:      fs,
 		workers: workers,
@@ -86,13 +85,13 @@ func newParallelHasher(ctx context.Context, fs fs.Filesystem, workers int, outbo
 
 	for i := 0; i < workers; i++ {
 		ph.wg.Add(1)
-		go ph.hashFiles(ctx)
+		go ph.hashFiles(ctx, cf)
 	}
 
 	go ph.closeWhenDone()
 }
 
-func (ph *parallelHasher) hashFiles(ctx context.Context) {
+func (ph *parallelHasher) hashFiles(ctx context.Context, cf ChunkerFactory) {
 	defer ph.wg.Done()
 
 	for {
@@ -106,7 +105,7 @@ func (ph *parallelHasher) hashFiles(ctx context.Context) {
 				panic("Bug. Asked to hash a directory or a deleted file.")
 			}
 
-			blocks, err := HashFile(ctx, ph.fs, f.Name, f.BlockSize(), ph.counter, true)
+			blocks, err := HashFile(ctx, ph.fs, f.Name, f.Blocks, cf, ph.counter, true)
 			if err != nil {
 				l.Debugln("hash error:", f.Name, err)
 				continue

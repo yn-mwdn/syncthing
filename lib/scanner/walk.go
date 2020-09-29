@@ -58,7 +58,8 @@ type Config struct {
 	// Modification time is to be considered unchanged if the difference is lower.
 	ModTimeWindow time.Duration
 	// Event logger to which the scan progress events are sent
-	EventLogger events.Logger
+	EventLogger    events.Logger
+	ChunkerFactory ChunkerFactory
 }
 
 type CurrentFiler interface {
@@ -127,7 +128,7 @@ func (w *walker) walk(ctx context.Context) chan ScanResult {
 	// We're not required to emit scan progress events, just kick off hashers,
 	// and feed inputs directly from the walker.
 	if w.ProgressTickIntervalS < 0 {
-		newParallelHasher(ctx, w.Filesystem, w.Hashers, finishedChan, toHashChan, nil, nil)
+		newParallelHasher(ctx, w.Filesystem, w.Hashers, finishedChan, toHashChan, nil, nil, w.ChunkerFactory)
 		return finishedChan
 	}
 
@@ -158,7 +159,7 @@ func (w *walker) walk(ctx context.Context) chan ScanResult {
 		done := make(chan struct{})
 		progress := newByteCounter()
 
-		newParallelHasher(ctx, w.Filesystem, w.Hashers, finishedChan, realToHashChan, progress, done)
+		newParallelHasher(ctx, w.Filesystem, w.Hashers, finishedChan, realToHashChan, progress, done, w.ChunkerFactory)
 
 		// A routine which actually emits the FolderScanProgress events
 		// every w.ProgressTicker ticks, until the hasher routines terminate.
@@ -331,26 +332,9 @@ func (w *walker) handleItem(ctx context.Context, path string, info fs.FileInfo, 
 func (w *walker) walkRegular(ctx context.Context, relPath string, info fs.FileInfo, toHashChan chan<- protocol.FileInfo) error {
 	curFile, hasCurFile := w.CurrentFiler.CurrentFile(relPath)
 
-	blockSize := protocol.BlockSize(info.Size())
-
-	if hasCurFile {
-		// Check if we should retain current block size.
-		curBlockSize := curFile.BlockSize()
-		if blockSize > curBlockSize && blockSize/curBlockSize <= 2 {
-			// New block size is larger, but not more than twice larger.
-			// Retain.
-			blockSize = curBlockSize
-		} else if curBlockSize > blockSize && curBlockSize/blockSize <= 2 {
-			// Old block size is larger, but not more than twice larger.
-			// Retain.
-			blockSize = curBlockSize
-		}
-	}
-
 	f, _ := CreateFileInfo(info, relPath, nil)
 	f = w.updateFileInfo(f, curFile)
 	f.NoPermissions = w.IgnorePerms
-	f.RawBlockSize = int32(blockSize)
 
 	if hasCurFile {
 		if curFile.IsEquivalentOptional(f, w.ModTimeWindow, w.IgnorePerms, true, w.LocalFlags) {
@@ -521,6 +505,7 @@ func (w *walker) updateFileInfo(file, curFile protocol.FileInfo) protocol.FileIn
 		file.Permissions |= (curFile.Permissions & 0111)
 	}
 	file.Version = curFile.Version.Update(w.ShortID)
+	file.Blocks = curFile.Blocks
 	file.ModifiedBy = w.ShortID
 	file.LocalFlags = w.LocalFlags
 	return file

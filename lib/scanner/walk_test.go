@@ -561,8 +561,10 @@ func BenchmarkHashFile(b *testing.B) {
 	initOnce.Do(initTestFile)
 	b.ResetTimer()
 
+	cf := NewStandardChunkerFactory()
+
 	for i := 0; i < b.N; i++ {
-		if _, err := HashFile(context.TODO(), fs.NewFilesystem(testFsType, ""), testdataName, protocol.MinBlockSize, nil, true); err != nil {
+		if _, err := HashFile(context.TODO(), fs.NewFilesystem(testFsType, ""), testdataName, nil, cf, nil, true); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -900,8 +902,9 @@ func testConfig() Config {
 	evLogger := events.NewLogger()
 	go evLogger.Serve()
 	return Config{
-		Filesystem:  testFs,
-		Hashers:     2,
-		EventLogger: evLogger,
+		Filesystem:     testFs,
+		Hashers:        2,
+		EventLogger:    evLogger,
+		ChunkerFactory: NewStandardChunkerFactory(),
 	}
 }

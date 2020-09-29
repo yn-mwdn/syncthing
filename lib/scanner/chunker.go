@@ -14,9 +14,42 @@ import (
 	"github.com/syncthing/syncthing/lib/protocol"
 )
 
+type ChunkerFactory interface {
+	// NewChunker returns a new chunker for the data stream in `r`, which is
+	// of size `size`. The list of current blocks is optional, if known and
+	// passed it may influence the block selection.
+	NewChunker(r io.Reader, size int64, curBlocks []protocol.BlockInfo) Chunker
+}
+
 type Chunker interface {
-	Chunks() int // Estimated number of chunks, optional
+	// Chunks returns the number of chunks in the file and true, if known. A
+	// chunker that doesn't know the number of chunks until actually reading
+	// the stream should return any value and false.
+	Chunks() (int, bool)
+
+	// Chunk returns a reader for the next chunk of data, or an error. The
+	// error is io.EOF when the last chunk has been processed.
 	Chunk() (io.Reader, error)
+}
+
+// NewStandardChunkerFactory returns a ChunkerFactory that implements the
+// usual Syncthing power-of-two block sizes with slight preference towards
+// an existing block size.
+func NewStandardChunkerFactory() ChunkerFactory {
+	return &standardChunkerFactory{}
+}
+
+type standardChunkerFactory struct{}
+
+func (s standardChunkerFactory) NewChunker(r io.Reader, size int64, curBlocks []protocol.BlockInfo) Chunker {
+	curBlockSize := 0
+	if len(curBlocks) > 0 {
+		// Size of the first block is either representative of the actual
+		// block size, or it's smaller than protocol.MinBlockSize in which
+		// case it gets clamped.
+		curBlockSize = int(curBlocks[0].Size)
+	}
+	return NewStandardChunker(r, size, curBlockSize)
 }
 
 // NewStandardChunker creates a new fixed-size chunker based on our block
@@ -71,8 +104,8 @@ type standardChunker struct {
 	chunkSize int64
 }
 
-func (c *standardChunker) Chunks() int {
-	return int((c.size + 1) / c.chunkSize)
+func (c *standardChunker) Chunks() (int, bool) {
+	return int((c.size + 1) / c.chunkSize), true
 }
 
 func (c *standardChunker) Chunk() (io.Reader, error) {
@@ -105,8 +138,8 @@ func newPatternBreaker(r io.Reader, min, max int, pattern []byte) *patternBreake
 	return b
 }
 
-func (b *patternBreaker) Chunks() int {
-	return -1
+func (b *patternBreaker) Chunks() (int, bool) {
+	return 0, false
 }
 
 func (b *patternBreaker) Chunk() (io.Reader, error) {

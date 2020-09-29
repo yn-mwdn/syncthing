@@ -44,7 +44,7 @@ func Blocks(ctx context.Context, chunker Chunker, counter Counter, useWeakHashes
 	var blocks []protocol.BlockInfo
 	var hashes, thisHash []byte
 
-	if numBlocks := chunker.Chunks(); numBlocks > 0 {
+	if numBlocks, ok := chunker.Chunks(); ok {
 		// Allocate contiguous blocks for the BlockInfo structures and their
 		// hashes once and for all, and stick to the specified size.
 		blocks = make([]protocol.BlockInfo, 0, numBlocks)
