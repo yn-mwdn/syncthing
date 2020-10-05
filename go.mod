@@ -52,4 +52,6 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 )
 
+replace github.com/jotfs/fastcdc-go v0.2.0 => github.com/kastelo-labs/fastcdc-go v0.2.1-0.20201005161259-c6826aee5505
+
 go 1.14
