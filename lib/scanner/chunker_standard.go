@@ -31,7 +31,7 @@ func (s standardChunkerFactory) NewChunker(r io.Reader, size int64, curBlocks []
 		// Size of the first block is either representative of the actual
 		// block size, or it's smaller than protocol.MinBlockSize in which
 		// case it gets clamped.
-		curBlockSize = int(curBlocks[0].Size)
+		curBlockSize = curBlocks[0].Size
 	}
 	return NewStandardChunker(r, size, curBlockSize)
 }
