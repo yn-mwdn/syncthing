@@ -596,7 +596,7 @@ func CreateFileInfo(fi fs.FileInfo, name string, filesystem fs.Filesystem) (prot
 	}
 	f.Permissions = uint32(fi.Mode() & fs.ModePerm)
 	f.ModifiedS = fi.ModTime().Unix()
-	f.ModifiedNs = int32(fi.ModTime().Nanosecond())
+	f.ModifiedNs = fi.ModTime().Nanosecond()
 	if fi.IsDir() {
 		f.Type = protocol.FileInfoTypeDirectory
 		return f, nil

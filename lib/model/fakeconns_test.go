@@ -35,6 +35,7 @@ type fakeConnection struct {
 	indexFn                  func(context.Context, string, []protocol.FileInfo)
 	requestFn                func(ctx context.Context, folder, name string, offset int64, size int, hash []byte, fromTemporary bool) ([]byte, error)
 	closeFn                  func(error)
+	clusterConfigFn          func(protocol.ClusterConfig)
 	mut                      sync.Mutex
 }
 
@@ -91,7 +92,13 @@ func (f *fakeConnection) Request(ctx context.Context, folder, name string, offse
 	return f.fileData[name], nil
 }
 
-func (f *fakeConnection) ClusterConfig(protocol.ClusterConfig) {}
+func (f *fakeConnection) ClusterConfig(cc protocol.ClusterConfig) {
+	f.mut.Lock()
+	defer f.mut.Unlock()
+	if f.clusterConfigFn != nil {
+		f.clusterConfigFn(cc)
+	}
+}
 
 func (f *fakeConnection) Ping() bool {
 	f.mut.Lock()
@@ -195,7 +202,7 @@ func (f *fakeConnection) sendIndexUpdate() {
 
 func addFakeConn(m *model, dev protocol.DeviceID) *fakeConnection {
 	fc := &fakeConnection{id: dev, model: m}
-	m.AddConnection(fc, protocol.HelloResult{})
+	m.AddConnection(fc, protocol.Hello{})
 
 	m.ClusterConfig(dev, protocol.ClusterConfig{
 		Folders: []protocol.Folder{

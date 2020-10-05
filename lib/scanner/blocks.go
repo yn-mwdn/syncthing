@@ -89,7 +89,7 @@ func Blocks(ctx context.Context, chunker Chunker, counter Counter, useWeakHashes
 		thisHash, hashes = hashes[:hashLength], hashes[hashLength:]
 
 		b := protocol.BlockInfo{
-			Size:     int32(n),
+			Size:     int(n),
 			Offset:   offset,
 			Hash:     thisHash,
 			WeakHash: weakHf.Sum32(),
