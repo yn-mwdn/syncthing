@@ -292,7 +292,7 @@ func TestCopierFinder(t *testing.T) {
 			}
 
 			// Verify that the fetched blocks have actually been written to the temp file
-			cf := scanner.NewStandardChunkerFactory()
+			cf := scanner.NewChunkerFactory("standard")
 			blks, err := scanner.HashFile(context.TODO(), f.Filesystem(), tempFile, nil, cf, nil, false)
 			if err != nil {
 				t.Log(err)

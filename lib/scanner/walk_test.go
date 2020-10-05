@@ -561,7 +561,7 @@ func BenchmarkHashFile(b *testing.B) {
 	initOnce.Do(initTestFile)
 	b.ResetTimer()
 
-	cf := NewStandardChunkerFactory()
+	cf := NewDefaultChunkerFactory()
 
 	for i := 0; i < b.N; i++ {
 		if _, err := HashFile(context.TODO(), fs.NewFilesystem(testFsType, ""), testdataName, nil, cf, nil, true); err != nil {
@@ -905,6 +905,6 @@ func testConfig() Config {
 		Filesystem:     testFs,
 		Hashers:        2,
 		EventLogger:    evLogger,
-		ChunkerFactory: NewStandardChunkerFactory(),
+		ChunkerFactory: NewDefaultChunkerFactory(),
 	}
 }

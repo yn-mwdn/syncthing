@@ -31,3 +31,11 @@ type Chunker interface {
 	// error is io.EOF when the last chunk has been processed.
 	Chunk() (io.Reader, error)
 }
+
+func NewChunkerFactory(name string) ChunkerFactory {
+	return chunkerFactoryRegistry[name]
+}
+
+func NewDefaultChunkerFactory() ChunkerFactory {
+	return chunkerFactoryRegistry["fastcdc"]
+}

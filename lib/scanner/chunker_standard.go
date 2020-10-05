@@ -13,14 +13,7 @@ import (
 )
 
 func init() {
-	chunkerFactoryRegistry["standard"] = NewStandardChunkerFactory()
-}
-
-// NewStandardChunkerFactory returns a ChunkerFactory that implements the
-// usual Syncthing power-of-two block sizes with slight preference towards
-// an existing block size.
-func NewStandardChunkerFactory() ChunkerFactory {
-	return &standardChunkerFactory{}
+	chunkerFactoryRegistry["standard"] = standardChunkerFactory{}
 }
 
 type standardChunkerFactory struct{}

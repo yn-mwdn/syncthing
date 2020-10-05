@@ -353,7 +353,7 @@ func (m *model) addAndStartFolderLockedWithIgnores(cfg config.FolderConfiguratio
 	}
 	m.folderVersioners[folder] = ver
 
-	p := folderFactory(m, fset, ignores, cfg, ver, ffs, m.evLogger, m.folderIOLimiter, scanner.NewStandardChunkerFactory())
+	p := folderFactory(m, fset, ignores, cfg, ver, ffs, m.evLogger, m.folderIOLimiter, scanner.NewDefaultChunkerFactory())
 
 	m.folderRunners[folder] = p
 
