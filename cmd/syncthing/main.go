@@ -681,7 +681,11 @@ func syncthingMain(runtimeOptions RuntimeOptions) {
 		appOpts.DBIndirectGCInterval = dur
 	}
 
-	app := syncthing.New(cfg, ldb, evLogger, cert, appOpts)
+	app, err := syncthing.New(cfg, ldb, evLogger, cert, appOpts)
+	if err != nil {
+		l.Warnln("Failed to start Syncthing:", err)
+		os.Exit(util.ExitError.AsInt())
+	}
 
 	if autoUpgradePossible {
 		go autoUpgrade(cfg, app, evLogger)
@@ -720,6 +724,10 @@ func syncthingMain(runtimeOptions RuntimeOptions) {
 	}
 
 	status := app.Wait()
+
+	if status == util.ExitError {
+		l.Warnln("Syncthing stopped with error:", app.Error())
+	}
 
 	if runtimeOptions.cpuProfile {
 		pprof.StopCPUProfile()

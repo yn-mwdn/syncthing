@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/syncthing/syncthing/lib/db/backend"
 	"github.com/syncthing/syncthing/lib/fs"
@@ -38,14 +39,18 @@ type FileSet struct {
 // continue iteration, false to stop.
 type Iterator func(f protocol.FileIntf) bool
 
-func NewFileSet(folder string, fs fs.Filesystem, db *Lowlevel) *FileSet {
+func NewFileSet(folder string, fs fs.Filesystem, db *Lowlevel) (*FileSet, error) {
+	meta, err := db.loadMetadataTracker(folder)
+	if err != nil {
+		return nil, err
+	}
 	return &FileSet{
 		folder:      folder,
 		fs:          fs,
 		db:          db,
-		meta:        db.loadMetadataTracker(folder),
+		meta:        meta,
 		updateMutex: sync.NewMutex(),
-	}
+	}, nil
 }
 
 func (s *FileSet) Drop(device protocol.DeviceID) {
@@ -534,6 +539,8 @@ func nativeFileIterator(fn Iterator) Iterator {
 	}
 }
 
+var ldbPathRe = regexp.MustCompile(`(open|write|read) .+[\\/].+[\\/]index[^\\/]+[\\/][^\\/]+: `)
+
 func fatalError(err error, opStr string, db *Lowlevel) {
 	if errors.Is(err, errEntryFromGlobalMissing) || errors.Is(err, errEmptyGlobal) {
 		// Inconsistency error, mark db for repair on next start.
@@ -544,5 +551,5 @@ func fatalError(err error, opStr string, db *Lowlevel) {
 		}
 	}
 	l.Warnf("Fatal error: %v: %v", opStr, err)
-	obfuscateAndPanic(err)
+	panic(ldbPathRe.ReplaceAllString(err.Error(), "$1 x: "))
 }

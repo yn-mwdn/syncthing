@@ -11,7 +11,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/syncthing/syncthing/lib/db/backend"
 	"github.com/syncthing/syncthing/lib/fs"
 	"github.com/syncthing/syncthing/lib/protocol"
 )
@@ -105,11 +104,11 @@ func TestMetaSequences(t *testing.T) {
 }
 
 func TestRecalcMeta(t *testing.T) {
-	ldb := NewLowlevel(backend.OpenMemory())
+	ldb := newLowlevelMemory(t)
 	defer ldb.Close()
 
 	// Add some files
-	s1 := NewFileSet("test", fs.NewFilesystem(fs.FilesystemTypeFake, "fake"), ldb)
+	s1 := newFileSet(t, "test", fs.NewFilesystem(fs.FilesystemTypeFake, "fake"), ldb)
 	files := []protocol.FileInfo{
 		{Name: "a", Size: 1000},
 		{Name: "b", Size: 2000},
@@ -161,7 +160,7 @@ func TestRecalcMeta(t *testing.T) {
 	}
 
 	// Create a new fileset, which will realize the inconsistency and recalculate
-	s2 := NewFileSet("test", fs.NewFilesystem(fs.FilesystemTypeFake, "fake"), ldb)
+	s2 := newFileSet(t, "test", fs.NewFilesystem(fs.FilesystemTypeFake, "fake"), ldb)
 
 	// Verify local/global size
 	snap = s2.Snapshot()

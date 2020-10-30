@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/dchest/siphash"
@@ -67,7 +66,7 @@ type Lowlevel struct {
 	recheckInterval    time.Duration
 }
 
-func NewLowlevel(backend backend.Backend, opts ...Option) *Lowlevel {
+func NewLowlevel(backend backend.Backend, opts ...Option) (*Lowlevel, error) {
 	spec := util.Spec()
 	// Only log restarts in debug mode.
 	spec.EventHook = func(e suture.Event) {
@@ -90,11 +89,13 @@ func NewLowlevel(backend backend.Backend, opts ...Option) *Lowlevel {
 	if path := db.needsRepairPath(); path != "" {
 		if _, err := os.Lstat(path); err == nil {
 			l.Infoln("Database was marked for repair - this may take a while")
-			db.checkRepair()
+			if err := db.checkRepair(); err != nil {
+				return nil, err
+			}
 			os.Remove(path)
 		}
 	}
-	return db
+	return db, nil
 }
 
 type Option func(*Lowlevel)
@@ -803,29 +804,22 @@ func (b *bloomFilter) hash(id []byte) uint64 {
 }
 
 // checkRepair checks folder metadata and sequences for miscellaneous errors.
-func (db *Lowlevel) checkRepair() {
+func (db *Lowlevel) checkRepair() error {
 	for _, folder := range db.ListFolders() {
-		_ = db.getMetaAndCheck(folder)
+		if _, err := db.getMetaAndCheck(folder); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (db *Lowlevel) getMetaAndCheck(folder string) *metadataTracker {
+func (db *Lowlevel) getMetaAndCheck(folder string) (*metadataTracker, error) {
 	db.gcMut.RLock()
 	defer db.gcMut.RUnlock()
 
-	var err error
-	defer func() {
-		if err != nil && !backend.IsClosed(err) {
-			l.Warnf("Fatal error: %v", err)
-			obfuscateAndPanic(err)
-		}
-	}()
-
-	var fixed int
-	fixed, err = db.checkLocalNeed([]byte(folder))
+	fixed, err := db.checkLocalNeed([]byte(folder))
 	if err != nil {
-		err = fmt.Errorf("checking local need: %w", err)
-		return nil
+		return nil, fmt.Errorf("checking local need: %w", err)
 	}
 	if fixed != 0 {
 		l.Infof("Repaired %d local need entries for folder %v in database", fixed, folder)
@@ -833,23 +827,21 @@ func (db *Lowlevel) getMetaAndCheck(folder string) *metadataTracker {
 
 	meta, err := db.recalcMeta(folder)
 	if err != nil {
-		err = fmt.Errorf("recalculating metadata: %w", err)
-		return nil
+		return nil, fmt.Errorf("recalculating metadata: %w", err)
 	}
 
 	fixed, err = db.repairSequenceGCLocked(folder, meta)
 	if err != nil {
-		err = fmt.Errorf("repairing sequences: %w", err)
-		return nil
+		return nil, fmt.Errorf("repairing sequences: %w", err)
 	}
 	if fixed != 0 {
 		l.Infof("Repaired %d sequence entries for folder %v in database", fixed, folder)
 	}
 
-	return meta
+	return meta, nil
 }
 
-func (db *Lowlevel) loadMetadataTracker(folder string) *metadataTracker {
+func (db *Lowlevel) loadMetadataTracker(folder string) (*metadataTracker, error) {
 	meta := newMetadataTracker(db.keyer)
 	if err := meta.fromDB(db, []byte(folder)); err != nil {
 		if err == errMetaInconsistent {
@@ -862,7 +854,9 @@ func (db *Lowlevel) loadMetadataTracker(folder string) *metadataTracker {
 	}
 
 	curSeq := meta.Sequence(protocol.LocalDeviceID)
-	if metaOK := db.verifyLocalSequence(curSeq, folder); !metaOK {
+	if metaOK, err := db.verifyLocalSequence(curSeq, folder); err != nil {
+		return nil, fmt.Errorf("verifying sequences: %w", err)
+	} else if !metaOK {
 		l.Infof("Stored folder metadata for %q is out of date after crash; recalculating", folder)
 		return db.getMetaAndCheck(folder)
 	}
@@ -872,7 +866,7 @@ func (db *Lowlevel) loadMetadataTracker(folder string) *metadataTracker {
 		return db.getMetaAndCheck(folder)
 	}
 
-	return meta
+	return meta, nil
 }
 
 func (db *Lowlevel) recalcMeta(folderStr string) (*metadataTracker, error) {
@@ -932,7 +926,7 @@ func (db *Lowlevel) recalcMeta(folderStr string) (*metadataTracker, error) {
 
 // Verify the local sequence number from actual sequence entries. Returns
 // true if it was all good, or false if a fixup was necessary.
-func (db *Lowlevel) verifyLocalSequence(curSeq int64, folder string) bool {
+func (db *Lowlevel) verifyLocalSequence(curSeq int64, folder string) (bool, error) {
 	// Walk the sequence index from the current (supposedly) highest
 	// sequence number and raise the alarm if we get anything. This recovers
 	// from the occasion where we have written sequence entries to disk but
@@ -945,20 +939,18 @@ func (db *Lowlevel) verifyLocalSequence(curSeq int64, folder string) bool {
 
 	t, err := db.newReadOnlyTransaction()
 	if err != nil {
-		l.Warnf("Fatal error: %v", err)
-		obfuscateAndPanic(err)
+		return false, err
 	}
 	ok := true
 	if err := t.withHaveSequence([]byte(folder), curSeq+1, func(fi protocol.FileIntf) bool {
 		ok = false // we got something, which we should not have
 		return false
-	}); err != nil && !backend.IsClosed(err) {
-		l.Warnf("Fatal error: %v", err)
-		obfuscateAndPanic(err)
+	}); err != nil {
+		return false, err
 	}
 	t.close()
 
-	return ok
+	return ok, nil
 }
 
 // repairSequenceGCLocked makes sure the sequence numbers in the sequence keys
@@ -1163,10 +1155,4 @@ func (db *Lowlevel) needsRepairPath() string {
 // being bumped.
 func unchanged(nf, ef protocol.FileIntf) bool {
 	return ef.FileVersion().Equal(nf.FileVersion()) && ef.IsInvalid() == nf.IsInvalid() && ef.FileLocalFlags() == nf.FileLocalFlags()
-}
-
-var ldbPathRe = regexp.MustCompile(`(open|write|read) .+[\\/].+[\\/]index[^\\/]+[\\/][^\\/]+: `)
-
-func obfuscateAndPanic(err error) {
-	panic(ldbPathRe.ReplaceAllString(err.Error(), "$1 x: "))
 }
