@@ -15,9 +15,7 @@ steps:
   displayName: 'Run a one-line script'
 - task: SpectralScan@0
   inputs:
-    dsn: $(SPECTRAL_DSN)
     installersrc: 'https://get.spectralops.io'
-    debug: true
 - script: |
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
