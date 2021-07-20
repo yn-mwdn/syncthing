@@ -11,13 +11,7 @@ pool:
 variables:
 - group: spectral
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-- script: curl -L 'https://get.spectralops.io/latest/x/sh?dsn=$(SPECTRAL_DSN)' | sh
-  displayName: 'Install Spectral'
-- script: $HOME/.spectral/spectral scan --ok --dsn $(SPECTRAL_DSN)
-  displayName: 'Spectral Scan'
-- task: SpectralScan@0.1.13
+- task: SpectralScan@0.1.14
 - script: |
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
