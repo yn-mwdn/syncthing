@@ -13,9 +13,7 @@ variables:
 steps:
 - script: echo Hello, world!
   displayName: 'Run a one-line script'
-- task: SpectralScan@0.1.7
-  inputs:
-    installersrc: 'https://get.spectralops.io'
+- task: SpectralScan@0.1.8
 - script: |
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
