@@ -11,7 +11,7 @@ pool:
 variables:
 - group: spectral
 steps:
-- task: SpectralScan@0.1.16
+- task: SpectralScan@0.1.17
 - script: |
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
