@@ -6,13 +6,27 @@
 trigger:
 - main
 
-pool:
-  vmImage: windows-latest
-variables:
-- group: spectral
-steps:
-- task: SpectralScan@0.1.29
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+jobs:
+- job: 'win'
+  pool:
+    vmImage: windows-latest
+  variables:
+  - group: spectral
+  steps:
+  - task: SpectralScan@0.1.30
+
+- job: 'linux'
+  pool:
+    vmImage: ubuntu-latest
+  variables:
+    - group: spectral
+  steps:
+    - task: SpectralScan@0.1.30
+
+- job: 'mac'
+  pool:
+    vmImage: macOS-latest
+  variables:
+    - group: spectral
+  steps:
+    - task: SpectralScan@0.1.30
