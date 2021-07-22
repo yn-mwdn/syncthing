@@ -13,7 +13,7 @@ jobs:
   variables:
   - group: spectral
   steps:
-  - task: SpectralScan@0.1.38
+  - task: SpectralScan@0.1.39
 
 - job: 'linux'
   pool:
@@ -21,7 +21,7 @@ jobs:
   variables:
     - group: spectral
   steps:
-    - task: SpectralScan@0.1.38
+    - task: SpectralScan@0.1.39
 
 - job: 'mac'
   pool:
@@ -29,4 +29,4 @@ jobs:
   variables:
     - group: spectral
   steps:
-    - task: SpectralScan@0.1.38
+    - task: SpectralScan@0.1.39
