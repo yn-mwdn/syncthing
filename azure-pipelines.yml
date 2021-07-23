@@ -10,23 +10,23 @@ jobs:
 - job: 'win'
   pool:
     vmImage: windows-latest
-  variables:
-  - group: spectral
   steps:
   - task: SpectralScan@0
+    inputs:
+        connection: 'spectral'
 
 - job: 'linux'
   pool:
     vmImage: ubuntu-latest
-  variables:
-    - group: spectral
   steps:
     - task: SpectralScan@0
+      inputs:
+          connection: 'spectral'
 
 - job: 'mac'
   pool:
     vmImage: macOS-latest
-  variables:
-    - group: spectral
   steps:
     - task: SpectralScan@0
+      inputs:
+          connection: 'spectral'
