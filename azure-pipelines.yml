@@ -10,6 +10,9 @@ jobs:
 - job: 'win'
   pool:
     vmImage: windows-latest
+  variables:
+    - name: DEBUG
+      value: "true"
   steps:
   - task: SpectralScan@0
     inputs:
@@ -18,6 +21,9 @@ jobs:
 - job: 'linux'
   pool:
     vmImage: ubuntu-latest
+  variables:
+      - name: DEBUG
+        value: "true"
   steps:
     - task: SpectralScan@0
       inputs:
@@ -26,6 +32,9 @@ jobs:
 - job: 'mac'
   pool:
     vmImage: macOS-latest
+  variables:
+        - name: DEBUG
+          value: "true"
   steps:
     - task: SpectralScan@0
       inputs:
