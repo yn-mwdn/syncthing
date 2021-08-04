@@ -14,7 +14,7 @@ jobs:
     - name: DEBUG
       value: "true"
   steps:
-  - task: Preflight@1.1.7
+  - task: Preflight@1.1.8
   - task: SpectralScan@0.1.53
     inputs:
         connection: 'spectral'
@@ -26,7 +26,7 @@ jobs:
       - name: DEBUG
         value: "true"
   steps:
-    - task: Preflight@1.1.7
+    - task: Preflight@1.1.8
     - task: SpectralScan@0.1.53
       inputs:
           connection: 'spectral'
@@ -38,7 +38,7 @@ jobs:
         - name: DEBUG
           value: "true"
   steps:
-    - task: Preflight@1.1.7
+    - task: Preflight@1.1.8
     - task: SpectralScan@0.1.53
       inputs:
           connection: 'spectral'
