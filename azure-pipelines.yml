@@ -15,6 +15,9 @@ jobs:
       value: "true"
   steps:
   - task: Preflight@1.1.8
+  - task: CmdLine@2
+    inputs:
+      script: './preglight.exe -h'
   - task: SpectralScan@0.1.53
     inputs:
         connection: 'spectral'
@@ -27,6 +30,9 @@ jobs:
         value: "true"
   steps:
     - task: Preflight@1.1.8
+    - task: CmdLine@2
+      inputs:
+                script: './preglight -h'
     - task: SpectralScan@0.1.53
       inputs:
           connection: 'spectral'
@@ -39,6 +45,9 @@ jobs:
           value: "true"
   steps:
     - task: Preflight@1.1.8
+    - task: CmdLine@2
+      inputs:
+                script: './preglight -h'
     - task: SpectralScan@0.1.53
       inputs:
           connection: 'spectral'
